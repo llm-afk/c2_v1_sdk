@@ -2,7 +2,7 @@ import math
 import struct
 import unittest
 
-from c2_v1_sdk import (CanFrame, ErrorFlag, MitCommand, disable_frame, enable_frame, error_names,
+from c2_sdk_v1 import (CanFrame, ErrorFlag, MitCommand, disable_frame, enable_frame, error_names,
                        mit_frame, mit_mode_frame, parse_control_reply, parse_state)
 
 

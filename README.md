@@ -1,4 +1,4 @@
-# c2_v1_sdk
+# c2_sdk_v1
 
 独立、零运行时依赖的 Python 电机协议 SDK，当前版本 `0.2.0`，Python >= 3.11。
 依据用户确认，MIT 固定使用 `0x100 + node`，使能按 GD 的 SDO 流程封装为独立方法。
@@ -37,7 +37,7 @@ CANable SDK 由调用脚本单独安装。本库也可使用其他实现了 `sen
 
 ```python
 import canable
-from c2_v1_sdk import CanableTransport, MotorBus
+from c2_sdk_v1 import CanableTransport, MotorBus
 
 def create_nodes(node_ids):
     # 前置条件：调用方已 canable.open(serial_number=..., fd=True, ...)。
@@ -136,7 +136,7 @@ USB 写入完成、CAN ACK、TPDO 收到、功率级使能和物理运动是不�
 用 `state.error_code` 取得原始位掩码，`state.errors` 使用公共 `ErrorFlag`，
 `error_names(code, firmware=None)` 输出公共名称并显式保留未知位。
 GD 独有的 `0x0100 MULTI_CHECK_ERROR`、`0x0800 ENC_SLIP` 只在明确指定 `firmware="gd"` 时命名。
-公共位定义见 [errors.py](c2_v1_sdk/errors.py)，来源与逐位表见 [协议核对](docs/protocol_sources.md)。
+公共位定义见 [errors.py](c2_sdk_v1/errors.py)，来源与逐位表见 [协议核对](docs/protocol_sources.md)。
 
 当前 ADM 源码在 TPDO 中屏蔽 `HEARTBEAT_TIMEOUT=0x0080`；当前 GD 源码没有屏蔽。
 SDK 不再次屏蔽任何错误位。ADM 的 `error_code=0` 不能证明完整错误寄存器为零。
@@ -154,6 +154,13 @@ GD 头文件部分旧错误名标注“失效”，ADM 的 `OVER_CURRENT_SOFT` �
 实际检查内容见 [离线验证记录](docs/validation.md)。
 
 SDK 使用独立本地 Git 历史接入 motor_test，远端仓库地址待提供，尚未发布。
+
+## 名称统一
+
+2026-11-02 用户将初始名称 `c2_v1_sdk` 改为 `c2_sdk_v1`。
+独立仓库目录、Python 包／导入名和安装项目名均使用 `c2_sdk_v1`，不提供旧名称别名。
+版本仍为 `0.2.0`，六个运行时模块内容、接口和协议行为未改变；Git 历史完整保留。
+历史验证记录中的旧 wheel 文件名对应当时实际生成的文件，继续保留。
 
 ## 从 0.1.0 升级
 

@@ -5,7 +5,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from c2_v1_sdk import CanableTransport, MotorBus
+from c2_sdk_v1 import CanableTransport, MotorBus
 
 try:
     import canable

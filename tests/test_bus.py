@@ -6,7 +6,7 @@ import threading
 from types import SimpleNamespace
 import unittest
 
-from c2_v1_sdk import CanableTransport, CanFrame, MotorBus
+from c2_sdk_v1 import CanableTransport, CanFrame, MotorBus
 
 
 def feedback(node, count=0):
