@@ -1,0 +1,154 @@
+{
+  "captured_date": "2026-11-02",
+  "timezone": "Asia/Shanghai",
+  "evidence": "Actual working-tree source bytes; no hardware validation",
+  "repositories": [
+    {
+      "name": "mc",
+      "local_path": "C:\\Users\\32196\\Desktop\\mc",
+      "head": "8f2388b933d2b78afa5936f0d391947ccad84a5b",
+      "files": [
+        {
+          "path": "2.Firmware/ADM32F036_mc_app/user/canfd.c",
+          "sha256": "26a1167b4da641fc8c1fe928d1704d2d109046d47aa60c9a0670385e2076958f",
+          "bytes": 13631,
+          "lines": 387,
+          "status": "clean"
+        },
+        {
+          "path": "2.Firmware/ADM32F036_mc_app/user/canfd.h",
+          "sha256": "cb2116aa27dacf33e2e02ebabd50ef04899faf36115799f821520390ff64a168",
+          "bytes": 1910,
+          "lines": 71,
+          "status": "clean"
+        },
+        {
+          "path": "2.Firmware/ADM32F036_mc_app/user/motor_ctrl.c",
+          "sha256": "3ee5c358c9c6d55a5f7fedefb76ea732ad19225a2ef46fa35d5942addda8e142",
+          "bytes": 18870,
+          "lines": 549,
+          "status": "clean"
+        },
+        {
+          "path": "2.Firmware/ADM32F036_mc_app/user/motor_ctrl.h",
+          "sha256": "70682c13edcd922f9da37bb221abf1132f53a04b65df881f1445c9012d40a391",
+          "bytes": 1988,
+          "lines": 73,
+          "status": "clean"
+        },
+        {
+          "path": "2.Firmware/ADM32F036_mc_app/user/od.c",
+          "sha256": "6cf8f9782d7c35a3ba42394087a2393be7837e853b32e467f5b1007e6d6a2d96",
+          "bytes": 10120,
+          "lines": 355,
+          "status": "clean"
+        },
+        {
+          "path": "2.Firmware/ADM32F036_mc_app/user/encoder.c",
+          "sha256": "25a6777a7e51f62f91063bb8f8363b677d76f3d13283f3f508baa222f3432894",
+          "bytes": 18992,
+          "lines": 553,
+          "status": "clean"
+        }
+      ]
+    },
+    {
+      "name": "c1_driver",
+      "local_path": "C:\\Users\\32196\\Desktop\\c1_driver",
+      "head": "ac76b6b7db1c7c73150fb1a45f780c855ca35b08",
+      "files": [
+        {
+          "path": "Firmware_app/Source/com_can.c",
+          "sha256": "012e8def013d05425b14f0a4f370c560efa80f1ad8238a6bf7cb7794a0cb51ae",
+          "bytes": 13940,
+          "lines": 419,
+          "status": "clean"
+        },
+        {
+          "path": "Firmware_app/Source/com_can.h",
+          "sha256": "d7b42d168d015c1b3ff0f67f50f97e2a180b8ddacfa22276ca57ec5481640d99",
+          "bytes": 2593,
+          "lines": 60,
+          "status": "clean"
+        },
+        {
+          "path": "Firmware_app/Source/motor_ctrl.c",
+          "sha256": "3c8d8087b03e220c73f9a30a04cf4936b7d558ca101e1409505bcce0a0001aa3",
+          "bytes": 51868,
+          "lines": 1676,
+          "status": "M  Firmware_app/Source/motor_ctrl.c"
+        },
+        {
+          "path": "Firmware_app/Source/motor_ctrl.h",
+          "sha256": "369f8e7473d800f732099f2c3618473eea3146e28c349b633cc5d2e81776e653",
+          "bytes": 12002,
+          "lines": 290,
+          "status": "clean"
+        },
+        {
+          "path": "Firmware_app/Source/od.c",
+          "sha256": "773cdc103f05719546cf778ef86419c4eaf36c3e89f762f4f57cad1728f7dc5b",
+          "bytes": 37216,
+          "lines": 1202,
+          "status": "M  Firmware_app/Source/od.c"
+        },
+        {
+          "path": "Firmware_app/Source/encoder.c",
+          "sha256": "d9673a3eb0db6695b4fa573818411a70b7cce74af75278aa8e632255a88b0fe0",
+          "bytes": 27616,
+          "lines": 785,
+          "status": "clean"
+        }
+      ]
+    },
+    {
+      "name": "mc_tools",
+      "local_path": "C:\\Users\\32196\\Desktop\\mc_tools",
+      "head": "f409053b6f8eef4ba71ceda4c09231f391326392",
+      "files": [
+        {
+          "path": "motor_platform/components/motor/protocol.py",
+          "sha256": "b086b90df06eb0d906de9e81969d67519d75dd6d1cfd0faeb209408c75b7741a",
+          "bytes": 3247,
+          "lines": 77,
+          "status": "clean"
+        },
+        {
+          "path": "motor_platform/components/motor/client.py",
+          "sha256": "f20c0a2ac2fc6e9b271d8dee084a7eeb24532255c9e6d08e7c18173faf1b2309",
+          "bytes": 10836,
+          "lines": 263,
+          "status": "clean"
+        },
+        {
+          "path": "docs/motor_protocol.md",
+          "sha256": "7c79c97199922ab1ad68f6f1d9505a2b8ebbeee2e7c966a30fd7e15191a711a3",
+          "bytes": 9629,
+          "lines": 140,
+          "status": "clean"
+        },
+        {
+          "path": "scripts/feedforward_sweep/app.py",
+          "sha256": "aa404b0d8e1bc77ce18129da877dadbe3d29537eaebdf3cfdb614dbd2dc8c18c",
+          "bytes": 7086,
+          "lines": 159,
+          "status": "M scripts/feedforward_sweep/app.py"
+        },
+        {
+          "path": "scripts/position_sweep/native_engine.c",
+          "sha256": "7703fdfcc66bf4478f9251b38a77a9f09a1dcefd6b8e6c1cdb127faa50760ab0",
+          "bytes": 17112,
+          "lines": 326,
+          "status": "M scripts/position_sweep/native_engine.c"
+        },
+        {
+          "path": "tests/test_motor.py",
+          "sha256": "1376aefd0c58b3b53e87060f747306586fbcae5588cbb1f59c26d9f960eecedb",
+          "bytes": 11814,
+          "lines": 262,
+          "status": "clean"
+        }
+      ]
+    }
+  ]
+}
