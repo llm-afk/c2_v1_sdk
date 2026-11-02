@@ -45,12 +45,95 @@ class BusTests(unittest.TestCase):
         motor = MotorBus(transport).motor(1)
         motor.send_mit(position=1, velocity=-2, torque=.5, kp=20, kd=1)
         self.assertEqual(len(transport.sent), 1)
+        self.assertEqual(transport.sent[0].can_id, 0x101)
         self.assertEqual(transport.sent[0].data.hex(), "0000803f000000c00000003fd0076400")
         self.assertEqual(transport.receive_calls, [])
         motor.disable()
         self.assertEqual(transport.sent[1].data.hex(), "2b02200002000000")
         self.assertIsNone(motor.last_state)
         self.assertFalse(hasattr(motor, "enabled"))
+
+    def test_explicit_enable_mit_feedback_disable_and_no_automatic_reenable(self):
+        class Driver(FakeTransport):
+            """Only a protocol fixture; it does not model physical motor behavior."""
+
+            def __init__(self):
+                super().__init__()
+                self.run_requested = False
+
+            def send(self, frame):
+                super().send(frame)
+                if frame.can_id == 0x601 and frame.data[:4] == bytes.fromhex("2b022000"):
+                    self.run_requested = frame.data[4:6] == b"\x01\x00"
+                    self.frames.append(CanFrame(0x581, b"\x60" + frame.data[1:]))
+                elif frame.can_id == 0x601 and frame.data == bytes.fromhex("2f03200003000000"):
+                    self.frames.append(CanFrame(0x581, b"\x60" + frame.data[1:]))
+                elif frame.can_id == 0x101:
+                    self.frames.append(feedback(1))
+                else:
+                    raise AssertionError(f"unexpected control frame: {frame}")
+
+        driver = Driver()
+        bus = MotorBus(driver)
+        motor = bus.motor(1)
+        motor.enable()
+        self.assertTrue(driver.run_requested)
+        mode = bus.recv().control_reply
+        control = bus.recv().control_reply
+        self.assertEqual((mode.index, control.index), (0x2003, 0x2002))
+        self.assertTrue(mode.accepted and control.accepted)
+        motor.send_mit(position=1, velocity=0, torque=.1, kp=20, kd=1)
+        self.assertIsNotNone(bus.recv().state)
+        motor.disable()
+        self.assertFalse(driver.run_requested)
+        motor.send_mit(position=0, velocity=0, torque=0, kp=0, kd=0)
+        self.assertFalse(driver.run_requested)
+        self.assertTrue(bus.recv().control_reply.accepted)
+        self.assertIsNotNone(bus.recv().state)
+        self.assertEqual([frame.can_id for frame in driver.sent], [0x601, 0x601, 0x101, 0x601, 0x101])
+
+    def test_enable_sends_request_without_reading_or_inferring_success(self):
+        transport = FakeTransport()
+        motor = MotorBus(transport).motor(1)
+        self.assertIsNone(motor.enable())
+        self.assertEqual([(frame.can_id, frame.data.hex()) for frame in transport.sent],
+                         [(0x601, "2f03200003000000"), (0x601, "2b02200001000000")])
+        self.assertEqual(transport.receive_calls, [])
+        self.assertIsNone(motor.last_state)
+        self.assertFalse(hasattr(motor, "enabled"))
+
+    def test_adm_mode_rejection_is_not_hidden_before_control_reply(self):
+        class Adm(FakeTransport):
+            def send(self, frame):
+                super().send(frame)
+                cs = 0x80 if frame.data[1:3] == b"\x03\x20" else 0x60
+                self.frames.append(CanFrame(0x581, bytes([cs]) + frame.data[1:]))
+
+        tr = Adm()
+        bus = MotorBus(tr)
+        bus.motor(1).enable()
+        first, second = bus.recv(), bus.recv()
+        self.assertEqual((first.control_reply.index, first.control_reply.accepted), (0x2003, False))
+        self.assertEqual((second.control_reply.index, second.control_reply.accepted), (0x2002, True))
+        self.assertEqual(first.frame.data[0], 0x80)
+        self.assertEqual((first.receive_index, second.receive_index), (1, 2))
+
+    def test_enable_transport_failure_stops_sequence_without_retry(self):
+        class Broken(FakeTransport):
+            def __init__(self, fail_on):
+                super().__init__()
+                self.fail_on = fail_on
+
+            def send(self, frame):
+                super().send(frame)
+                if len(self.sent) == self.fail_on:
+                    raise OSError("uncertain SDO write")
+
+        for failure in (1, 2):
+            tr = Broken(failure)
+            with self.subTest(failure=failure), self.assertRaises(OSError):
+                MotorBus(tr).motor(1).enable()
+            self.assertEqual(len(tr.sent), failure)
 
     def test_validation_is_atomic_and_never_sends_invalid_command(self):
         transport = FakeTransport()
@@ -141,7 +224,7 @@ class BusTests(unittest.TestCase):
         failures = []
 
         def wrong_thread():
-            for operation in (lambda: bus.motor(2), bus.recv, motor.disable,
+            for operation in (lambda: bus.motor(2), bus.recv, motor.enable, motor.disable,
                               lambda: motor.send_mit(position=0, velocity=0, torque=0, kp=0, kd=0)):
                 try:
                     operation()
@@ -151,7 +234,7 @@ class BusTests(unittest.TestCase):
         thread = threading.Thread(target=wrong_thread)
         thread.start()
         thread.join()
-        self.assertEqual(len(failures), 4)
+        self.assertEqual(len(failures), 5)
         self.assertEqual((transport.sent, transport.receive_calls), ([], []))
 
     def test_invalid_timeout_does_not_consume_a_frame(self):
@@ -173,7 +256,7 @@ class AdapterTests(unittest.TestCase):
         bus = MotorBus(adapter)
         motor = bus.motor(1)
         motor.send_mit(position=0, velocity=0, torque=.1, kp=0, kd=0)
-        self.assertEqual(sent[0][0][0], 0x401)
+        self.assertEqual(sent[0][0][0], 0x101)
         self.assertEqual(sent[0][1], {"brs": True, "is_extended": False})
         self.assertEqual(bus.recv().state.position, 0)
         for frame in (replace(raw, is_fd=False), replace(raw, is_error=True),

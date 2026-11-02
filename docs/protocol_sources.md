@@ -4,19 +4,26 @@
 Git HEAD 不能代表带修改的文件；精确快照由 [source_manifest.json](source_manifest.json) 的 SHA-256 标识。
 这些是源码／测试代码证据，尚无本 SDK 的设备通信或物理行为证据。
 
-## 最小公共路径
+## 当前采用的 MIT 与使能路径
 
 | 事实 | ADM：`mc/2.Firmware/ADM32F036_mc_app/user/` | GD：`c1_driver/Firmware_app/Source/` | 旧主机参考 |
 |---|---|---|---|
-| MIT ID `0x400+node`，反馈 `0x190+node` | `canfd.h` 的 RPDO6／TPDO5 | `com_can.h` 的 RPDO3／TPDO5 | `motor_platform/components/motor/protocol.py` |
-| 三个 float32 + 两个 uint16，16 B | `canfd.c::parse_frame` RPDO6 | `com_can.c::parse_frame` RPDO3 | 同上 `MitCommand.pack`／黄金字节测试 |
-| 收到 MIT 时尝试使能 | `RunSignal==0 && error_code==0` 才置 1 | 尝试切 operation_mode=3，control_word=1；受状态机限制 | 同上 `mit_frame`，`docs/motor_protocol.md` |
+| MIT ID `0x100+node`，反馈 `0x190+node` | `canfd.h` 的 RPDO5／TPDO5 | `com_can.h` 的 RPDO5／TPDO5 | 旧工具只选 0x400，本版按用户确认改 ID |
+| 三个 float32 + 两个 uint16，16 B | `canfd.c::parse_frame` RPDO5 | `com_can.c::parse_frame` RPDO5 | 旧 `MitCommand.pack`／黄金字节的载荷仍适用 |
+| `0x100` 接收分支不请求使能 | 只更新目标和超时状态 | 只更新目标和通信状态 | 固定 ID，不增加 auto_enable 参数 |
+| enable 先写 `0x2003=3`，再写 `0x2002=1` | 0x2003 不在对象表，预计拒绝；0x2002 定义且可写 | 0x2003 定义且为 1 B；0x2002 为 2 B，回调请求进入 operation | 按 GD 的准备模式／使能步骤封装 |
 | 每次处理 MIT 后填入当前反馈 | `canfd.c::parse_frame` | `com_can.c::parse_frame` | `parse_state`、扫频脚本逐包反馈 |
 | 失能写 `0x2002=2` | `od.c` 条目，`motor_ctrl.c::MC_controlword_update` | `od.c` 条目，同名回调 | `control_frame(node, False)` |
-| 全零 MIT 仍可能使能 | 同上 | 同上 | 旧 `enable()` 用全零 MIT 等反馈 |
+| 固件另有 `0x400` 入口 | RPDO6 会请求使能 | RPDO3 会尝试写 mode=3、control_word=1 | 0.1.0 曾使用，0.2.0 按用户选择不采用 |
 
-不按固件的 RPDO 序号命名公共接口：同一个 `0x400` 在两份头文件里名字不同。
-仅取此共同线路；没有照搬旧平台的 Bench、调度、GUI、记录器或其他设备依赖。
+不按固件的 RPDO 序号命名公共接口。用户确认使用 0x100，并把使能／失能独立出来；随后指定直接使用 GD 逻辑。
+没有照搬旧平台的 Bench、调度、GUI、记录器或其他设备依赖。
+
+GD `od.c::dictionary_init` 将 operation_mode 初始化为 0，`MC_set_state(MCS_OPERATION)` 在模式为 0 时拒绝进入。
+因此不能只发送控制字 1 而省略模式准备。模式采用其 0x400 分支使用的值 3，写入为 CS=0x2F 的 1 字节 SDO。
+enable() 顺序提交两帧，不在中间收取 ACK；两个应答均从共享 recv 路径交付，ControlReply.index 区分 0x2003／0x2002。
+ADM 的对象表没有 0x2003，模式请求预计会返回 CS_ERR，后续 0x2002=1 仍会提交。
+该拒绝不会被隐藏成成功；用户提出的 ADM 可适配仍需实机核实，当前不创建自动识别或伪兼容结果。
 
 ## 单位与已发现的差异
 
@@ -73,5 +80,5 @@ Git HEAD 不能代表带修改的文件；精确快照由 [source_manifest.json]
 本 SDK 的唯一接收入口逐帧交付原始数据及可用的解析结果，不预读、跳过或静默覆盖。
 真实采集和 CSV 的持续负载能力要在公共记录器与具体脚本中继续设计和验证。
 
-旧 `enable()` 额外发全零 MIT；本 SDK 不再提供该隐式前置步骤，直接由用户完整指定 MIT 五参数。
+旧 `enable()` 额外发全零 0x400 MIT；本 SDK 的 enable 改为 GD 的模式／控制字 SDO，完全不发送 MIT 或覆盖五参数。
 退出、超时和错误不会隐式补发控制／失能；`disable()` 需调用方明确选择，且本身不提供物理关断确认。

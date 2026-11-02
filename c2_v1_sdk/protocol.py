@@ -1,4 +1,4 @@
-"""Pure codecs for the source-verified 0x400 MIT / 0x190 TPDO path."""
+"""Pure codecs for 0x100 MIT, explicit SDO control, and 0x190 feedback."""
 from dataclasses import dataclass, field
 import math
 import struct
@@ -6,11 +6,12 @@ import struct
 from .errors import ErrorFlag
 from .frame import CanFrame
 
-MIT_BASE = 0x400
+MIT_BASE = 0x100
 FEEDBACK_BASE = 0x190
 SDO_REQUEST_BASE = 0x600
 SDO_RESPONSE_BASE = 0x580
 CONTROL_WORD_INDEX = 0x2002
+OPERATION_MODE_INDEX = 0x2003
 _MIT = struct.Struct("<fffHH")
 _STATE = struct.Struct("<fffhh")
 
@@ -70,21 +71,37 @@ class MotorState:
 
 @dataclass(frozen=True)
 class ControlReply:
-    """Control-word SDO response, with no transaction or power-stage proof."""
+    """Control setup SDO response, with no transaction or power-stage proof."""
 
     node_id: int
     accepted: bool
     raw_data: bytes
+    index: int = CONTROL_WORD_INDEX
 
 
 def mit_frame(node_id: int, command: MitCommand) -> CanFrame:
     return CanFrame(MIT_BASE + validate_node(node_id), command.pack())
 
 
-def disable_frame(node_id: int) -> CanFrame:
+def _control_frame(node_id: int, value: int) -> CanFrame:
     # Keep FD+BRS as in the known transport path, although SDO payload is 8 bytes.
     return CanFrame(SDO_REQUEST_BASE + validate_node(node_id),
-                    bytes.fromhex("2b02200002000000"))
+                    struct.pack("<BHBH2x", 0x2B, CONTROL_WORD_INDEX, 0, value))
+
+
+def enable_frame(node_id: int) -> CanFrame:
+    """Request enable with control word 0x2002=1; not an enable confirmation."""
+    return _control_frame(node_id, 1)
+
+
+def mit_mode_frame(node_id: int) -> CanFrame:
+    """GD operation-mode write 0x2003=3; absent from the inspected ADM OD."""
+    return CanFrame(SDO_REQUEST_BASE + validate_node(node_id),
+                    struct.pack("<BHBB3x", 0x2F, OPERATION_MODE_INDEX, 0, 3))
+
+
+def disable_frame(node_id: int) -> CanFrame:
+    return _control_frame(node_id, 2)
 
 
 def _data_frame(frame, expected_id):
@@ -111,9 +128,12 @@ def parse_state(frame, node_id: int) -> MotorState:
 def parse_control_reply(frame, node_id: int) -> ControlReply:
     _data_frame(frame, SDO_RESPONSE_BASE + validate_node(node_id))
     raw = bytes(frame.data)
-    if len(raw) != 8 or raw[1:4] != bytes.fromhex("022000"):
-        raise ValueError("not an 8-byte SDO reply for 0x2002:00")
+    if len(raw) != 8 or raw[3] != 0:
+        raise ValueError("not an 8-byte control setup SDO reply with subindex 0")
+    index = int.from_bytes(raw[1:3], "little")
+    if index not in (CONTROL_WORD_INDEX, OPERATION_MODE_INDEX):
+        raise ValueError("not a control setup reply for 0x2002 or 0x2003")
     if raw[0] not in (0x60, 0x80):
         raise ValueError("unexpected SDO response command specifier")
     # Rejection payload is not assumed to contain a standard CANopen abort code.
-    return ControlReply(node_id, raw[0] == 0x60, raw)
+    return ControlReply(node_id, raw[0] == 0x60, raw, index)

@@ -2,8 +2,8 @@ import math
 import struct
 import unittest
 
-from c2_v1_sdk import (CanFrame, ErrorFlag, MitCommand, disable_frame, error_names,
-                       mit_frame, parse_control_reply, parse_state)
+from c2_v1_sdk import (CanFrame, ErrorFlag, MitCommand, disable_frame, enable_frame, error_names,
+                       mit_frame, mit_mode_frame, parse_control_reply, parse_state)
 
 
 def feedback(node=1, error=None, **flags):
@@ -16,7 +16,7 @@ def feedback(node=1, error=None, **flags):
 class CommandTests(unittest.TestCase):
     def test_golden_frame_and_gain_scaling(self):
         frame = mit_frame(1, MitCommand(1, -2, .5, 20, 1))
-        self.assertEqual(frame.can_id, 0x401)
+        self.assertEqual(frame.can_id, 0x101)
         self.assertEqual(frame.data.hex(), "0000803f000000c00000003fd0076400")
         self.assertTrue(frame.is_fd and frame.brs)
         self.assertFalse(frame.is_extended or frame.is_error or frame.is_remote)
@@ -25,11 +25,13 @@ class CommandTests(unittest.TestCase):
 
     def test_each_node_uses_addition_and_zero_is_unicast(self):
         for node in range(128):
-            self.assertEqual(mit_frame(node, MitCommand()).can_id, 0x400 + node)
+            self.assertEqual(mit_frame(node, MitCommand()).can_id, 0x100 + node)
+            self.assertEqual(enable_frame(node).can_id, 0x600 + node)
             self.assertEqual(disable_frame(node).can_id, 0x600 + node)
         for bad in (-1, 128, True, 1.0, "1"):
-            with self.subTest(node=bad), self.assertRaises(ValueError):
-                mit_frame(bad, MitCommand())
+            for make_frame in (lambda node: mit_frame(node, MitCommand()), enable_frame, disable_frame, mit_mode_frame):
+                with self.subTest(node=bad, codec=make_frame), self.assertRaises(ValueError):
+                    make_frame(bad)
 
     def test_nonfinite_overflow_and_wrong_types_rejected_in_all_fields(self):
         for name in ("position", "velocity", "torque", "kp", "kd"):
@@ -51,6 +53,21 @@ class CommandTests(unittest.TestCase):
     def test_disable_is_exact_two_byte_sdo_write(self):
         frame = disable_frame(127)
         self.assertEqual((frame.can_id, frame.data.hex()), (0x67F, "2b02200002000000"))
+
+    def test_enable_is_exact_two_byte_sdo_write(self):
+        frame = enable_frame(0)
+        self.assertEqual((frame.can_id, frame.data.hex()), (0x600, "2b02200001000000"))
+        self.assertTrue(frame.is_fd and frame.brs)
+
+    def test_gd_mit_mode_is_exact_one_byte_sdo_write(self):
+        frame = mit_mode_frame(127)
+        self.assertEqual((frame.can_id, frame.data.hex()), (0x67F, "2f03200003000000"))
+
+    def test_mode_acceptance_and_adm_rejection_are_both_visible(self):
+        for cs in (0x60, 0x80):
+            reply = parse_control_reply(CanFrame(0x581, bytes([cs]) + bytes.fromhex("03200003000000")), 1)
+            self.assertEqual(reply.index, 0x2003)
+            self.assertEqual(reply.accepted, cs == 0x60)
 
 
 class FeedbackTests(unittest.TestCase):

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "c2_v1_sdk"
-version = "0.1.0"
+version = "0.2.0"
 description = "Minimal C2 v1 CAN FD MIT command and feedback protocol"
 readme = "README.md"
 requires-python = ">=3.11"

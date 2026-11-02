@@ -40,18 +40,27 @@ class CanableIntegrationTests(unittest.TestCase):
 
     def check_roundtrip(self, bus, packets):
         motor = bus.motor(1)
+        motor.enable()
         motor.send_mit(position=1, velocity=-2, torque=.5, kp=20, kd=1)
-        sent = bytearray(packets[0])
+        sent = bytearray(packets[2])
         sent[:4] = bytes.fromhex("ffffffff")  # Treat captured TX bytes as a receive fixture.
         frame = decode_usb(bytes(sent))
-        self.assertEqual(frame.can_id, 0x401)
+        self.assertEqual(frame.can_id, 0x101)
         self.assertEqual(frame.data.hex(), "0000803f000000c00000003fd0076400")
         self.assertTrue(frame.is_fd and frame.brs)
         event = bus.recv()
         self.assertEqual(event.state.position, 1.5)
         self.assertEqual((event.state.timestamp_ns, event.state.sequence), (123456789, 1))
         motor.disable()
-        self.assertEqual(len(packets), 2)
+        self.assertEqual(len(packets), 4)
+        controls = []
+        for packet in (packets[0], packets[1], packets[3]):
+            received = bytearray(packet)
+            received[:4] = bytes.fromhex("ffffffff")
+            controls.append(decode_usb(bytes(received)))
+        self.assertEqual([(item.can_id, item.data.hex()) for item in controls],
+                         [(0x601, "2f03200003000000"), (0x601, "2b02200001000000"),
+                          (0x601, "2b02200002000000")])
 
     def test_canable_object_with_mock_usb(self):
         transport, packets = self.fake_open_transport()

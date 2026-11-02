@@ -5,8 +5,9 @@ import threading
 import time
 
 from .frame import CanFrame, CanTransport, snapshot
-from .protocol import (ControlReply, FEEDBACK_BASE, SDO_RESPONSE_BASE, MitCommand,
-                       MotorState, disable_frame, mit_frame, parse_control_reply,
+from .protocol import (CONTROL_WORD_INDEX, OPERATION_MODE_INDEX, ControlReply,
+                       FEEDBACK_BASE, SDO_RESPONSE_BASE, MitCommand,
+                       MotorState, disable_frame, enable_frame, mit_frame, mit_mode_frame, parse_control_reply,
                        parse_state, validate_node)
 
 
@@ -81,8 +82,10 @@ class MotorBus:
                     state = parse_state(frame, motor.node_id)
                     motor._last_state = state
                 elif motor := self._sdo.get(frame.can_id):
-                    # Other SDO objects stay raw; this SDK only handles disable.
-                    if len(frame.data) >= 4 and frame.data[1:4] == bytes.fromhex("022000"):
+                    # Preserve both mode and control-word replies, including rejection.
+                    if (len(frame.data) >= 4 and frame.data[3] == 0
+                            and int.from_bytes(frame.data[1:3], "little")
+                            in (CONTROL_WORD_INDEX, OPERATION_MODE_INDEX)):
                         reply = parse_control_reply(frame, motor.node_id)
             except ValueError as exc:
                 problem = str(exc)
@@ -108,13 +111,24 @@ class Motor:
 
     def send_mit(self, *, position: float, velocity: float, torque: float,
                  kp: float, kd: float) -> None:
-        """Send exactly one command; firmware attempts auto-enable on this path.
+        """Send one 0x100 MIT command, without an implicit enable request.
 
         Does not wait for feedback or retry. Transport completion is not proof of
         a CAN ACK, driver acceptance, power-stage enable or physical movement.
         """
         frame = mit_frame(self.node_id, MitCommand(position, velocity, torque, kp, kd))
         self._bus._send(frame)
+
+    def enable(self) -> None:
+        """Request GD MIT mode (0x2003=3), then enable (0x2002=1), in that order.
+
+        Does not receive, wait for ACK or infer enabled state. Both replies remain
+        in the shared receive stream. ADM's absent mode object may reject the
+        first write; this does not prove compatibility or prevent the second
+        request. Transport failure propagates immediately without retry.
+        """
+        self._bus._send(mit_mode_frame(self.node_id))
+        self._bus._send(enable_frame(self.node_id))
 
     def disable(self) -> None:
         """Send only SDO 0x2002=2; recv exposes any reply without correlating it.
