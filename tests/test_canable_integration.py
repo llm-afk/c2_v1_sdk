@@ -5,17 +5,17 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from c2_sdk_v1 import CanableTransport, MotorBus
+from c2_v1_sdk import CanableTransport, MotorBus
 
 try:
-    import canable
-    from canable.frame import CanFrame
-    from canable.transport import Canable, decode_usb, encode_usb
+    import canable_sdk
+    from canable_sdk.frame import CanFrame
+    from canable_sdk.transport import Canable, decode_usb, encode_usb
 except ImportError:
-    canable = None
+    canable_sdk = None
 
 
-@unittest.skipIf(canable is None, "install CANable SDK for optional offline integration")
+@unittest.skipIf(canable_sdk is None, "install CANable SDK for optional offline integration")
 class CanableIntegrationTests(unittest.TestCase):
     def fake_open_transport(self):
         packets = []
@@ -69,9 +69,9 @@ class CanableIntegrationTests(unittest.TestCase):
 
     def test_canable_five_function_module_with_mock_usb(self):
         transport, packets = self.fake_open_transport()
-        with patch.multiple(canable, _bus=transport, _owner=threading.get_ident(), _fd=True), \
+        with patch.multiple(canable_sdk, _bus=transport, _owner=threading.get_ident(), _fd=True), \
                 patch.object(Canable, "_connect", side_effect=AssertionError("no real USB")):
-            self.check_roundtrip(MotorBus(CanableTransport(canable)), packets)
+            self.check_roundtrip(MotorBus(CanableTransport(canable_sdk)), packets)
 
 
 if __name__ == "__main__":

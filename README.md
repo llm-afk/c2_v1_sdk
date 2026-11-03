@@ -1,4 +1,4 @@
-# c2_sdk_v1
+# c2_v1_sdk
 
 独立、零运行时依赖的 Python 电机协议 SDK，当前版本 `0.2.0`，Python >= 3.11。
 依据用户确认，MIT 固定使用 `0x100 + node`，使能按 GD 的 SDO 流程封装为独立方法。
@@ -32,16 +32,16 @@ CANable SDK 由调用脚本单独安装。本库也可使用其他实现了 `sen
 
 ## 与 CANable 组合
 
-调用脚本先明确选择适配器并用 `canable.open(..., fd=True)` 打开 CAN FD。
+调用脚本先明确选择适配器并用 `canable_sdk.open(..., fd=True)` 打开 CAN FD。
 下面的函数借用已打开连接；**仅定义函数不会执行控制**，节点号和全部控制量由调用方提供。
 
 ```python
-import canable
-from c2_sdk_v1 import CanableTransport, MotorBus
+import canable_sdk
+from c2_v1_sdk import CanableTransport, MotorBus
 
 def create_nodes(node_ids):
-    # 前置条件：调用方已 canable.open(serial_number=..., fd=True, ...)。
-    bus = MotorBus(CanableTransport(canable))
+    # 前置条件：调用方已 canable_sdk.open(serial_number=..., fd=True, ...)。
+    bus = MotorBus(CanableTransport(canable_sdk))
     return bus, {node: bus.motor(node) for node in node_ids}
 
 def send_and_observe(bus, motor, *, position, velocity, torque, kp, kd):
@@ -62,7 +62,7 @@ def request_disable(motor):
 ```
 
 CANable 对象接口也可直接注入：`MotorBus(open_canable_object)`，对象来自
-`canable.transport.Canable`。模块接口使用 `CanableTransport(canable)` 适配参数形式。
+`canable_sdk.transport.Canable`。模块接口使用 `CanableTransport(canable_sdk)` 适配参数形式。
 本库没有 `close()`：调用方负责先收尾、再关闭 CANable；关闭 USB 不等于失能电机。
 
 典型顺序为：`enable()` → 从共享总线查看 SDO 应答 → 持续 `send_mit()` 并接收自动状态 → `disable()`。
@@ -136,7 +136,7 @@ USB 写入完成、CAN ACK、TPDO 收到、功率级使能和物理运动是不�
 用 `state.error_code` 取得原始位掩码，`state.errors` 使用公共 `ErrorFlag`，
 `error_names(code, firmware=None)` 输出公共名称并显式保留未知位。
 GD 独有的 `0x0100 MULTI_CHECK_ERROR`、`0x0800 ENC_SLIP` 只在明确指定 `firmware="gd"` 时命名。
-公共位定义见 [errors.py](c2_sdk_v1/errors.py)，来源与逐位表见 [协议核对](docs/protocol_sources.md)。
+公共位定义见 [errors.py](c2_v1_sdk/errors.py)，来源与逐位表见 [协议核对](docs/protocol_sources.md)。
 
 当前 ADM 源码在 TPDO 中屏蔽 `HEARTBEAT_TIMEOUT=0x0080`；当前 GD 源码没有屏蔽。
 SDK 不再次屏蔽任何错误位。ADM 的 `error_code=0` 不能证明完整错误寄存器为零。
@@ -157,8 +157,8 @@ SDK 使用独立本地 Git 历史接入 motor_test，远端仓库地址待提供
 
 ## 名称统一
 
-2026-11-02 用户将初始名称 `c2_v1_sdk` 改为 `c2_sdk_v1`。
-独立仓库目录、Python 包／导入名和安装项目名均使用 `c2_sdk_v1`，不提供旧名称别名。
+2026-11-02 用户将初始名称 `c2_v1_sdk` 改为 `c2_v1_sdk`。
+独立仓库目录、Python 包／导入名和安装项目名均使用 `c2_v1_sdk`，不提供旧名称别名。
 版本仍为 `0.2.0`，六个运行时模块内容、接口和协议行为未改变；Git 历史完整保留。
 历史验证记录中的旧 wheel 文件名对应当时实际生成的文件，继续保留。
 

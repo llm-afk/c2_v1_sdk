@@ -2,10 +2,10 @@
 
 
 class CanableTransport:
-    """Borrow the canable module after canable.open(fd=True); never open/close it.
+    """Borrow the canable_sdk module after canable_sdk.open(fd=True); never open/close it.
 
-    Does not import canable or inspect its private fields. For CANable's object
-    interface (canable.transport.Canable), pass that open object to MotorBus
+    Does not import canable_sdk or inspect its private fields. For CANable's object
+    interface (canable_sdk.transport.Canable), pass that open object to MotorBus
     directly instead. One MotorBus must be the sole receiver for this channel.
     """
 
